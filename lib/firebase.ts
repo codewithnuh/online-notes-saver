@@ -3,12 +3,12 @@ import { getAnalytics } from "firebase/analytics";
 import { getAuth } from "firebase/auth";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyDhD343KwuTtGoHVk5mIOr7440y-zgOU2Y",//process.env.FIREBASE_API_KEY,
+  apiKey: process.env.FIREBASE_APP_KEY,
   authDomain: "online-notes-saver-ab1fe.firebaseapp.com",
   projectId: "online-notes-saver-ab1fe",
   storageBucket: "online-notes-saver-ab1fe.firebasestorage.app",
   messagingSenderId: "922414354949",
-  appId: "1:922414354949:web:8cbb410895d26c2b0c826c",
+  appId: process.env.FIREBASE_APP_ID,
   measurementId: "G-Z2H3WJLPH7",
 };
 
