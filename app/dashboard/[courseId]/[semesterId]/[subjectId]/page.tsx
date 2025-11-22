@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useEffect, use } from "react";
-import { Plus, FileText, File, ArrowLeft, ExternalLink, Share2 } from "lucide-react";
+import { Plus, FileText, File, ArrowLeft, ExternalLink, Share2, Pencil, Trash2 } from "lucide-react";
 import Link from "next/link";
-import { collection, query, where, getDocs, doc, getDoc, addDoc } from "firebase/firestore";
+import { collection, query, where, getDocs, doc, getDoc, addDoc, deleteDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import NoteEditor from "@/components/NoteEditor";
 import ReactMarkdown from "react-markdown";
@@ -23,6 +23,7 @@ export default function SubjectPage({ params }: { params: Promise<{ courseId: st
   const [subjectName, setSubjectName] = useState("");
   const [loading, setLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
+  const [editingNote, setEditingNote] = useState<Note | null>(null);
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
   const [shareUrl, setShareUrl] = useState("");
 
@@ -74,6 +75,27 @@ export default function SubjectPage({ params }: { params: Promise<{ courseId: st
     }
   };
 
+  const handleDeleteNote = async (noteId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!confirm("Are you sure you want to delete this note?")) return;
+
+    try {
+      await deleteDoc(doc(db, "notes", noteId));
+      setNotes(notes.filter(n => n.id !== noteId));
+      if (selectedNote?.id === noteId) {
+        setSelectedNote(null);
+      }
+    } catch (error) {
+      console.error("Error deleting note:", error);
+    }
+  };
+
+  const handleEditNote = (note: Note, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingNote(note);
+    setIsCreating(true);
+  };
+
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
@@ -98,7 +120,10 @@ export default function SubjectPage({ params }: { params: Promise<{ courseId: st
             Share
           </button>
           <button
-            onClick={() => setIsCreating(true)}
+            onClick={() => {
+              setEditingNote(null);
+              setIsCreating(true);
+            }}
             className="flex items-center gap-2 rounded-xl bg-yellow-400 px-4 py-2 font-semibold text-black transition-transform hover:scale-105"
           >
             <Plus size={20} />
@@ -110,11 +135,16 @@ export default function SubjectPage({ params }: { params: Promise<{ courseId: st
       {isCreating ? (
         <NoteEditor
           subjectId={subjectId}
+          initialNote={editingNote || undefined}
           onNoteAdded={() => {
             setIsCreating(false);
+            setEditingNote(null);
             fetchData();
           }}
-          onCancel={() => setIsCreating(false)}
+          onCancel={() => {
+            setIsCreating(false);
+            setEditingNote(null);
+          }}
         />
       ) : (
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -140,7 +170,7 @@ export default function SubjectPage({ params }: { params: Promise<{ courseId: st
                 <div
                   key={note.id}
                   onClick={() => setSelectedNote(note)}
-                  className={`cursor-pointer rounded-xl border p-4 transition-all ${
+                  className={`group cursor-pointer rounded-xl border p-4 transition-all ${
                     selectedNote?.id === note.id
                       ? "border-yellow-400 bg-yellow-400/5"
                       : "border-white/10 bg-[#0f0f0f] hover:border-white/20 hover:bg-white/5"
@@ -160,6 +190,21 @@ export default function SubjectPage({ params }: { params: Promise<{ courseId: st
                         </p>
                       </div>
                     </div>
+                    
+                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={(e) => handleEditNote(note, e)}
+                        className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+                      >
+                        <Pencil size={16} />
+                      </button>
+                      <button
+                        onClick={(e) => handleDeleteNote(note.id, e)}
+                        className="p-2 rounded-full bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))
@@ -170,10 +215,26 @@ export default function SubjectPage({ params }: { params: Promise<{ courseId: st
           <div className="sticky top-6 h-[calc(100vh-100px)] overflow-hidden rounded-2xl border border-white/10 bg-[#0f0f0f]">
             {selectedNote ? (
               <div className="flex h-full flex-col">
-                <div className="border-b border-white/10 bg-white/5 p-4">
+                <div className="border-b border-white/10 bg-white/5 p-4 flex justify-between items-center">
                   <h3 className="text-xl font-bold text-white">
                     {selectedNote.title}
                   </h3>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={(e) => handleEditNote(selectedNote, e)}
+                      className="p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors"
+                      title="Edit Note"
+                    >
+                      <Pencil size={18} />
+                    </button>
+                    <button
+                      onClick={(e) => handleDeleteNote(selectedNote.id, e)}
+                      className="p-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors"
+                      title="Delete Note"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
                 </div>
                 <div className="flex-1 overflow-auto p-6">
                   {selectedNote.type === "pdf" ? (

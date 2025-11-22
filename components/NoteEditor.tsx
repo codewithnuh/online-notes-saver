@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Save, FileText, Upload, X, File } from "lucide-react";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { addDoc, collection } from "firebase/firestore";
+import { addDoc, collection, doc, updateDoc } from "firebase/firestore";
 import { db, storage } from "@/lib/firebase";
 import ReactMarkdown from "react-markdown";
 
@@ -11,11 +11,18 @@ interface NoteEditorProps {
   subjectId: string;
   onNoteAdded: () => void;
   onCancel: () => void;
+  initialNote?: {
+    id: string;
+    title: string;
+    content: string;
+    fileUrl?: string;
+    type: "markdown" | "pdf";
+  };
 }
 
-export default function NoteEditor({ subjectId, onNoteAdded, onCancel }: NoteEditorProps) {
-  const [title, setTitle] = useState("");
-  const [content, setContent] = useState("");
+export default function NoteEditor({ subjectId, onNoteAdded, onCancel, initialNote }: NoteEditorProps) {
+  const [title, setTitle] = useState(initialNote?.title || "");
+  const [content, setContent] = useState(initialNote?.content || "");
   const [isPreview, setIsPreview] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [file, setFile] = useState<File | null>(null);
@@ -25,28 +32,51 @@ export default function NoteEditor({ subjectId, onNoteAdded, onCancel }: NoteEdi
     setIsUploading(true);
 
     try {
-      let fileUrl = "";
-      let type = "markdown";
-
-      if (file) {
-        const storageRef = ref(storage, `notes/${subjectId}/${Date.now()}_${file.name}`);
-        await uploadBytes(storageRef, file);
-        fileUrl = await getDownloadURL(storageRef);
-        type = "pdf";
-      }
-
-      await addDoc(collection(db, "notes"), {
-        title,
-        content: type === "markdown" ? content : "",
-        fileUrl,
-        type,
-        subjectId,
-        createdAt: new Date(),
+      // Create a promise that rejects after 10 seconds
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error("Request timed out")), 10000);
       });
+
+      const savePromise = async () => {
+        let fileUrl = initialNote?.fileUrl || "";
+        let type = initialNote?.type || "markdown";
+
+        if (file) {
+          const storageRef = ref(storage, `notes/${subjectId}/${Date.now()}_${file.name}`);
+          await uploadBytes(storageRef, file);
+          fileUrl = await getDownloadURL(storageRef);
+          type = "pdf";
+        }
+
+        if (initialNote) {
+          // Update existing note
+          await updateDoc(doc(db, "notes", initialNote.id), {
+            title,
+            content: type === "markdown" ? content : "",
+            fileUrl,
+            type,
+            updatedAt: new Date(),
+          });
+        } else {
+          // Create new note
+          await addDoc(collection(db, "notes"), {
+            title,
+            content: type === "markdown" ? content : "",
+            fileUrl,
+            type,
+            subjectId,
+            createdAt: new Date(),
+          });
+        }
+      };
+
+      // Race the save operation against the timeout
+      await Promise.race([savePromise(), timeoutPromise]);
 
       onNoteAdded();
     } catch (error) {
       console.error("Error saving note:", error);
+      alert("Failed to save note. Please try again. Check console for details.");
     } finally {
       setIsUploading(false);
     }

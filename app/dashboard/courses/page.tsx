@@ -21,7 +21,7 @@ const GRADIENTS = [
   "from-green-400 to-emerald-500",
 ];
 
-export default function DashboardPage() {
+export default function CoursesPage() {
   const { user } = useAuth();
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
