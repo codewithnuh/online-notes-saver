@@ -1,29 +1,22 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
-import { connectAuthEmulator, getAuth } from "firebase/auth";
+import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyDhD343KwuTtGoHVk5mIOr7440y-zgOU2Y",
-
-  authDomain: "online-notes-saver-ab1fe.firebaseapp.com",
-
-  projectId: "online-notes-saver-ab1fe",
-
-  storageBucket: "online-notes-saver-ab1fe.firebasestorage.app",
-
-  messagingSenderId: "922414354949",
-
-  appId: "1:922414354949:web:8cbb410895d26c2b0c826c",
-
-  measurementId: "G-Z2H3WJLPH7"
-
+  // Access the PUBLIC environment variables
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
 };
 
 // Initialize Firebase
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 const auth = getAuth(app);
-// connectAuthEmulator(auth, "http://localhost:9099");
 const db = getFirestore(app);
 const storage = getStorage(app);
 
